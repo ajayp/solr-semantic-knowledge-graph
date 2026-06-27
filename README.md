@@ -34,6 +34,30 @@ A term gets a **high relatedness score** when it appears *much more often* in th
 
 No stop-word list required. The engine never needs to be told which words are meaningless; the statistics show it. The result is an automatically discovered concept graph grounded entirely in your corpus — terms that consistently appear in the same contexts surface as semantically related, whether or not a human ever labelled that relationship.
 
+The two index structures do all the work:
+
+```mermaid
+graph LR
+    q(("ibuprofen"))
+
+    q -->|"inverted index"| d1["doc 1"]
+    q --> d2["doc 2"]
+    q --> d3["doc 3"]
+    q --> d4["doc 4"]
+    q --> d5["doc 5"]
+
+    d1 -->|"forward index"| advil(("advil"))
+    d2 --> advil
+    d1 --> motrin(("motrin"))
+    d3 --> motrin
+    d2 --> acetaminophen(("acetaminophen"))
+    d4 --> acetaminophen
+    d5 --> naproxen(("naproxen"))
+    d3 --> naproxen
+```
+
+The **inverted index** maps the query term to the documents it appears in (the foreground set). The **forward index** (Doc Values) then maps each of those documents back out to all the other terms they contain. Terms that appear across many of those documents — and rarely outside them — score highest.
+
 **Under the hood:** the JSON facet request `skg.ts` sends to Solr looks like this:
 
 ```json
@@ -72,7 +96,7 @@ No medical ontology. No hand-coded synonyms. Just corpus statistics.
 
 ## Prerequisites
 
-- **Docker Desktop** — to run Solr
+- **Docker Desktop** — to run Solr (allocate at least 4 GB RAM; multi-collection `relatedness()` faceting is memory-intensive)
 - **Node.js 18+** — for native `fetch` and modern `fs` APIs
 - **CSV files in `data/`**
 
@@ -122,7 +146,7 @@ npm install
 npm run index
 ```
 
-Creates and populates seven Solr collections: `jobs`, `health`, `cooking`, `scifi`, `travel`, `devops`, and `stackexchange` (the five StackExchange sets merged). Each collection is wiped and rebuilt from scratch on every run. Depending on CSV sizes, expect a few minutes total. Progress is logged per collection:
+Creates and populates seven Solr collections: `jobs`, `health`, `cooking`, `scifi`, `travel`, `devops`, and `stackexchange` (the five StackExchange CSVs — health, cooking, scifi, travel, devops — merged automatically during ingest into a single cross-domain collection). Each collection is wiped and rebuilt from scratch on every run. Depending on CSV sizes, expect a few minutes total. Progress is logged per collection:
 
 ```
 jobs: 30002 documents indexed
